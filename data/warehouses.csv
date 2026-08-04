@@ -1,0 +1,7 @@
+warehouse,city,capacity_pct,inventory_units,status
+Delhi Hub,Delhi,72,18400,Operational
+Mumbai Hub,Mumbai,84,16250,Operational
+Bengaluru Hub,Bengaluru,65,22100,Operational
+Chennai Hub,Chennai,91,13800,At Risk
+Hyderabad Hub,Hyderabad,68,17600,Operational
+Kolkata Hub,Kolkata,76,15400,Operational

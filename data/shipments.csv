@@ -1,0 +1,81 @@
+shipment_id,origin,destination,distance_km,weather,traffic,priority,vehicle_health,warehouse_load,shipment_value_inr,base_eta_hours,predicted_delay_hours,risk_score,status,origin_lat,origin_lon,destination_lat,destination_lon
+SHP-1001,Delhi,Ahmedabad,1061,Heavy Rain,High,Standard,Poor,Busy,1807819,22.1,17.0,99,Delayed,28.6139,77.209,23.0225,72.5714
+SHP-1002,Pune,Ahmedabad,1175,Heavy Rain,Medium,High,Good,Normal,958455,24.5,8.4,61,Delayed,18.5204,73.8567,23.0225,72.5714
+SHP-1003,Ahmedabad,Delhi,1781,Rain,High,Standard,Poor,Overloaded,1710901,37.1,15.1,99,Delayed,23.0225,72.5714,28.6139,77.209
+SHP-1004,Chennai,Ahmedabad,1170,Clear,High,High,Poor,Normal,157319,24.4,8.5,60,Delayed,13.0827,80.2707,23.0225,72.5714
+SHP-1005,Delhi,Hyderabad,600,Clear,Medium,Standard,Average,Normal,443685,12.5,2.6,25,At Risk,28.6139,77.209,17.385,78.4867
+SHP-1006,Delhi,Ahmedabad,1670,Heavy Rain,Medium,Standard,Average,Normal,2089036,34.8,10.8,79,Delayed,28.6139,77.209,23.0225,72.5714
+SHP-1007,Ahmedabad,Delhi,1705,Rain,High,High,Good,Busy,141292,35.5,9.8,67,Delayed,23.0225,72.5714,28.6139,77.209
+SHP-1008,Mumbai,Hyderabad,1460,Rain,High,High,Average,Busy,1204185,30.4,11.0,78,Delayed,19.076,72.8777,17.385,78.4867
+SHP-1009,Delhi,Kolkata,1057,Clear,Medium,Critical,Good,Normal,2146393,22.0,2.2,28,At Risk,28.6139,77.209,22.5726,88.3639
+SHP-1010,Bengaluru,Hyderabad,483,Rain,High,Standard,Average,Normal,1414728,10.1,8.1,61,Delayed,12.9716,77.5946,17.385,78.4867
+SHP-1011,Delhi,Lucknow,1586,Clear,Low,Standard,Good,Busy,1264283,33.0,1.9,23,On Track,28.6139,77.209,26.8467,80.9462
+SHP-1012,Bengaluru,Hyderabad,1514,Clear,Low,Standard,Poor,Overloaded,1594192,31.5,8.4,64,Delayed,12.9716,77.5946,17.385,78.4867
+SHP-1013,Hyderabad,Bengaluru,2042,Rain,High,Standard,Good,Normal,1145208,42.5,7.5,57,Delayed,17.385,78.4867,12.9716,77.5946
+SHP-1014,Ahmedabad,Pune,1584,Rain,Low,Critical,Average,Busy,799593,33.0,6.3,48,Delayed,23.0225,72.5714,18.5204,73.8567
+SHP-1015,Jaipur,Bengaluru,1330,Rain,Low,Standard,Good,Normal,511151,27.7,2.9,27,At Risk,26.9124,75.7873,12.9716,77.5946
+SHP-1016,Jaipur,Bengaluru,574,Clear,Severe,High,Good,Busy,1489729,12.0,9.7,71,Delayed,26.9124,75.7873,12.9716,77.5946
+SHP-1017,Lucknow,Mumbai,1142,Rain,Low,Standard,Good,Overloaded,444496,23.8,3.9,33,At Risk,26.8467,80.9462,19.076,72.8777
+SHP-1018,Pune,Kolkata,2014,Clear,Medium,Standard,Average,Overloaded,862344,42.0,7.8,58,Delayed,18.5204,73.8567,22.5726,88.3639
+SHP-1019,Kolkata,Bengaluru,450,Rain,Medium,High,Average,Busy,835664,9.4,6.9,52,Delayed,22.5726,88.3639,12.9716,77.5946
+SHP-1020,Lucknow,Delhi,687,Rain,Medium,High,Average,Normal,141660,14.3,7.1,51,Delayed,26.8467,80.9462,28.6139,77.209
+SHP-1021,Kolkata,Bengaluru,1202,Clear,Severe,Standard,Good,Normal,2424964,25.0,8.7,68,Delayed,22.5726,88.3639,12.9716,77.5946
+SHP-1022,Pune,Delhi,1814,Heavy Rain,Medium,Standard,Average,Busy,2232441,37.8,12.8,92,Delayed,18.5204,73.8567,28.6139,77.209
+SHP-1023,Ahmedabad,Delhi,1631,Clear,Severe,Standard,Good,Busy,2235183,34.0,9.5,72,Delayed,23.0225,72.5714,28.6139,77.209
+SHP-1024,Mumbai,Chennai,1581,Clear,Medium,High,Poor,Normal,2192676,32.9,6.8,56,Delayed,19.076,72.8777,13.0827,80.2707
+SHP-1025,Delhi,Pune,674,Clear,High,Standard,Good,Busy,1927160,14.0,4.9,44,Delayed,28.6139,77.209,18.5204,73.8567
+SHP-1026,Kolkata,Pune,296,Rain,Low,Standard,Poor,Normal,1802747,6.2,7.1,56,Delayed,22.5726,88.3639,18.5204,73.8567
+SHP-1027,Mumbai,Hyderabad,1476,Storm,Medium,Critical,Good,Busy,413110,30.8,12.2,83,Delayed,19.076,72.8777,17.385,78.4867
+SHP-1028,Ahmedabad,Kolkata,1635,Storm,Medium,Critical,Average,Normal,1076830,34.1,13.3,91,Delayed,23.0225,72.5714,22.5726,88.3639
+SHP-1029,Ahmedabad,Delhi,451,Heavy Rain,High,Standard,Good,Busy,2336398,9.4,14.7,99,Delayed,23.0225,72.5714,28.6139,77.209
+SHP-1030,Bengaluru,Ahmedabad,469,Clear,High,Critical,Good,Normal,966750,9.8,3.0,29,At Risk,12.9716,77.5946,23.0225,72.5714
+SHP-1031,Pune,Ahmedabad,1760,Clear,Low,High,Good,Busy,830873,36.7,1.7,21,On Track,18.5204,73.8567,23.0225,72.5714
+SHP-1032,Bengaluru,Lucknow,1357,Clear,Low,Standard,Good,Normal,455552,28.3,0.8,14,On Track,12.9716,77.5946,26.8467,80.9462
+SHP-1033,Delhi,Ahmedabad,1343,Rain,Medium,Standard,Good,Overloaded,1991995,28.0,8.4,65,Delayed,28.6139,77.209,23.0225,72.5714
+SHP-1034,Hyderabad,Ahmedabad,1894,Clear,Medium,Standard,Good,Normal,630024,39.5,2.3,24,At Risk,17.385,78.4867,23.0225,72.5714
+SHP-1035,Mumbai,Pune,1791,Clear,Severe,Standard,Average,Overloaded,637701,37.3,13.9,93,Delayed,19.076,72.8777,18.5204,73.8567
+SHP-1036,Pune,Kolkata,1411,Rain,Low,Standard,Good,Overloaded,1624084,29.4,3.4,34,At Risk,18.5204,73.8567,22.5726,88.3639
+SHP-1037,Ahmedabad,Chennai,1433,Clear,Low,Standard,Good,Normal,878680,29.9,1.5,20,On Track,23.0225,72.5714,13.0827,80.2707
+SHP-1038,Ahmedabad,Chennai,1052,Rain,Medium,Critical,Poor,Normal,979686,21.9,10.4,74,Delayed,23.0225,72.5714,13.0827,80.2707
+SHP-1039,Hyderabad,Kolkata,1819,Rain,High,Standard,Average,Normal,482961,37.9,7.1,52,Delayed,17.385,78.4867,22.5726,88.3639
+SHP-1040,Jaipur,Kolkata,1181,Clear,Medium,Standard,Average,Normal,2158761,24.6,2.1,28,At Risk,26.9124,75.7873,22.5726,88.3639
+SHP-1041,Jaipur,Mumbai,2023,Heavy Rain,Medium,High,Average,Overloaded,270758,42.1,12.5,84,Delayed,26.9124,75.7873,19.076,72.8777
+SHP-1042,Delhi,Bengaluru,1213,Clear,Medium,High,Good,Normal,1559605,25.3,2.1,26,At Risk,28.6139,77.209,12.9716,77.5946
+SHP-1043,Pune,Ahmedabad,1160,Rain,Severe,Standard,Good,Normal,1246073,24.2,11.5,81,Delayed,18.5204,73.8567,23.0225,72.5714
+SHP-1044,Kolkata,Lucknow,635,Clear,High,High,Good,Normal,1694516,13.2,4.3,39,Delayed,22.5726,88.3639,26.8467,80.9462
+SHP-1045,Bengaluru,Mumbai,523,Heavy Rain,Medium,Standard,Average,Busy,2375212,10.9,11.7,86,Delayed,12.9716,77.5946,19.076,72.8777
+SHP-1046,Jaipur,Pune,508,Storm,High,Critical,Good,Overloaded,972080,10.6,18.3,99,Delayed,26.9124,75.7873,18.5204,73.8567
+SHP-1047,Lucknow,Mumbai,1338,Rain,Low,Standard,Average,Normal,2422360,27.9,3.5,37,At Risk,26.8467,80.9462,19.076,72.8777
+SHP-1048,Delhi,Hyderabad,1203,Rain,Low,Critical,Poor,Normal,2300182,25.1,8.1,64,Delayed,28.6139,77.209,17.385,78.4867
+SHP-1049,Delhi,Mumbai,2098,Rain,High,Standard,Poor,Normal,652495,43.7,11.3,78,Delayed,28.6139,77.209,19.076,72.8777
+SHP-1050,Bengaluru,Pune,1745,Heavy Rain,High,Standard,Good,Normal,535600,36.4,8.1,58,Delayed,12.9716,77.5946,18.5204,73.8567
+SHP-1051,Pune,Lucknow,691,Heavy Rain,Low,High,Poor,Busy,2123013,14.4,14.6,99,Delayed,18.5204,73.8567,26.8467,80.9462
+SHP-1052,Hyderabad,Jaipur,1093,Clear,Medium,High,Average,Overloaded,544366,22.8,7.3,54,Delayed,17.385,78.4867,26.9124,75.7873
+SHP-1053,Lucknow,Ahmedabad,607,Clear,High,Critical,Average,Normal,221993,12.6,7.1,51,Delayed,26.8467,80.9462,23.0225,72.5714
+SHP-1054,Kolkata,Bengaluru,1099,Clear,Low,Standard,Poor,Normal,1788466,22.9,6.0,50,Delayed,22.5726,88.3639,12.9716,77.5946
+SHP-1055,Bengaluru,Jaipur,1308,Clear,Severe,Standard,Average,Busy,680856,27.2,13.3,90,Delayed,12.9716,77.5946,26.9124,75.7873
+SHP-1056,Mumbai,Kolkata,1104,Clear,Medium,Standard,Good,Normal,1295464,23.0,3.3,32,At Risk,19.076,72.8777,22.5726,88.3639
+SHP-1057,Kolkata,Hyderabad,1380,Rain,Medium,Standard,Good,Busy,1523854,28.8,4.9,42,Delayed,22.5726,88.3639,17.385,78.4867
+SHP-1058,Lucknow,Bengaluru,1132,Clear,Medium,High,Average,Busy,1211625,23.6,5.7,46,Delayed,26.8467,80.9462,12.9716,77.5946
+SHP-1059,Chennai,Kolkata,1706,Clear,Medium,High,Good,Normal,2030335,35.5,2.1,27,At Risk,13.0827,80.2707,22.5726,88.3639
+SHP-1060,Jaipur,Mumbai,1822,Clear,High,Standard,Average,Normal,1283900,38.0,7.2,55,Delayed,26.9124,75.7873,19.076,72.8777
+SHP-1061,Delhi,Lucknow,1807,Clear,Medium,Standard,Good,Normal,213025,37.6,1.6,18,On Track,28.6139,77.209,26.8467,80.9462
+SHP-1062,Jaipur,Hyderabad,1556,Clear,Low,High,Good,Normal,2148542,32.4,0.0,15,On Track,26.9124,75.7873,17.385,78.4867
+SHP-1063,Lucknow,Delhi,1678,Clear,High,High,Good,Busy,867389,35.0,6.9,52,Delayed,26.8467,80.9462,28.6139,77.209
+SHP-1064,Delhi,Ahmedabad,1113,Clear,High,Critical,Average,Busy,451190,23.2,9.6,67,Delayed,28.6139,77.209,23.0225,72.5714
+SHP-1065,Kolkata,Mumbai,1079,Clear,Low,High,Good,Normal,2301381,22.5,0.0,15,On Track,22.5726,88.3639,19.076,72.8777
+SHP-1066,Mumbai,Bengaluru,1990,Clear,Medium,Standard,Average,Normal,159390,41.5,3.1,27,At Risk,19.076,72.8777,12.9716,77.5946
+SHP-1067,Bengaluru,Lucknow,1810,Rain,Medium,High,Average,Normal,1826126,37.7,6.8,55,Delayed,12.9716,77.5946,26.8467,80.9462
+SHP-1068,Pune,Chennai,1973,Clear,High,Critical,Good,Overloaded,2118973,41.1,7.6,60,Delayed,18.5204,73.8567,13.0827,80.2707
+SHP-1069,Pune,Mumbai,880,Clear,Medium,Standard,Good,Overloaded,1591000,18.3,5.1,44,Delayed,18.5204,73.8567,19.076,72.8777
+SHP-1070,Delhi,Kolkata,835,Clear,Severe,Standard,Good,Busy,519427,17.4,9.9,69,Delayed,28.6139,77.209,22.5726,88.3639
+SHP-1071,Bengaluru,Chennai,1550,Rain,Severe,High,Good,Busy,1644664,32.3,9.1,68,Delayed,12.9716,77.5946,13.0827,80.2707
+SHP-1072,Pune,Bengaluru,1403,Heavy Rain,Low,High,Good,Busy,1965912,29.2,8.3,64,Delayed,18.5204,73.8567,12.9716,77.5946
+SHP-1073,Lucknow,Chennai,2071,Clear,High,High,Good,Normal,779554,43.1,4.0,34,Delayed,26.8467,80.9462,13.0827,80.2707
+SHP-1074,Lucknow,Delhi,1868,Clear,Severe,Standard,Average,Normal,2464573,38.9,9.7,74,Delayed,26.8467,80.9462,28.6139,77.209
+SHP-1075,Pune,Hyderabad,1960,Heavy Rain,Low,Standard,Good,Normal,2332333,40.8,4.8,44,Delayed,18.5204,73.8567,17.385,78.4867
+SHP-1076,Jaipur,Lucknow,265,Rain,High,Standard,Good,Busy,2170368,5.5,7.5,60,Delayed,26.9124,75.7873,26.8467,80.9462
+SHP-1077,Chennai,Delhi,1202,Rain,Low,Standard,Poor,Busy,673892,25.0,6.1,47,Delayed,13.0827,80.2707,28.6139,77.209
+SHP-1078,Kolkata,Bengaluru,1692,Clear,Medium,Standard,Good,Overloaded,2140694,35.2,4.7,43,Delayed,22.5726,88.3639,12.9716,77.5946
+SHP-1079,Jaipur,Delhi,882,Rain,High,Critical,Good,Normal,1358712,18.4,7.2,56,Delayed,26.9124,75.7873,28.6139,77.209
+SHP-1080,Mumbai,Lucknow,1832,Rain,Medium,Critical,Good,Normal,1767158,38.2,6.0,50,Delayed,19.076,72.8777,26.8467,80.9462
