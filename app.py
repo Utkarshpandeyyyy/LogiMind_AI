@@ -7,6 +7,11 @@ import streamlit as st
 import networkx as nx
 import json
 
+import importlib
+import engine
+import order_agent
+importlib.reload(engine)
+importlib.reload(order_agent)
 from engine import simulate, risk_level, answer_copilot
 
 BASE_DIR = Path(__file__).parent
@@ -47,13 +52,69 @@ def load_data():
     return shipments, warehouses
 
 shipments, warehouses = load_data()
+# Initialize session state variables
+if "logged_in" not in st.session_state:
+    st.session_state["logged_in"] = False
+if "user_role" not in st.session_state:
+    st.session_state["user_role"] = None
+
+# Credentials
+USER_ROLES = {
+    "Executive (Admin)": "admin123",
+    "Logistics Operator": "ops123",
+    "Guest (Viewer)": "guest123"
+}
+
+if not st.session_state["logged_in"]:
+    st.markdown("""
+        <div style="background: linear-gradient(135deg, #1e293b, #0f172a); padding: 2rem; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.1); margin-top: 2rem;">
+            <h2 style="color: white; margin-top: 0;">🔒 Secure Logistics Access Control</h2>
+            <p style="color: #94a3b8; font-size: 0.95rem;">Please select your corporate credentials to access the LogiMind AI Platform.</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    st.write("")
+    
+    with st.form("login_form"):
+        role = st.selectbox("Select User Role", list(USER_ROLES.keys()))
+        password = st.text_input("Enter Access Password", type="password", placeholder="••••••••")
+        submit = st.form_submit_button("Authenticate Access", use_container_width=True)
+        
+        if submit:
+            expected_pass = USER_ROLES.get(role)
+            if password == expected_pass:
+                st.session_state["logged_in"] = True
+                st.session_state["user_role"] = role
+                st.success(f"Successfully authenticated as {role}!")
+                st.rerun()
+            else:
+                st.error("Incorrect password for the selected role. Please try again.")
+                
+    st.stop()
+
+# If logged in, filter navigation based on role permissions
+role = st.session_state["user_role"]
+
+# Define authorized views
+if role == "Executive (Admin)":
+    allowed_pages = ["Executive Control Tower", "Digital Twin Simulator", "Network Intelligence", "AI Copilot", "Data Governance & MDM"]
+elif role == "Logistics Operator":
+    allowed_pages = ["Digital Twin Simulator", "Network Intelligence", "AI Copilot"]
+else:  # Guest (Viewer)
+    allowed_pages = ["Executive Control Tower", "Network Intelligence"]
+
+# Sidebar authentication panel
+st.sidebar.markdown(f"**Authenticated**: `{role}`")
+if st.sidebar.button("Log Out Session", use_container_width=True):
+    st.session_state["logged_in"] = False
+    st.session_state["user_role"] = None
+    st.rerun()
+
+st.sidebar.divider()
 
 st.sidebar.title("LogiMind AI")
 st.sidebar.caption("Autonomous Supply Chain Decision Intelligence")
-page = st.sidebar.radio(
-    "Navigate",
-    ["Executive Control Tower", "Digital Twin Simulator", "Network Intelligence", "AI Copilot", "Data Platform & Lake"],
-)
+page = st.sidebar.radio("Navigate", allowed_pages)
 
 st.sidebar.divider()
 st.sidebar.info(
@@ -301,8 +362,8 @@ elif page == "AI Copilot":
         else:
             st.warning("Enter a question first.")
 
-elif page == "Data Platform & Lake":
-    st.subheader("Medallion Data Pipeline & Local Data Lake")
+elif page == "Data Governance & MDM":
+    st.subheader("Medallion Data Pipeline & Master Data Management")
     st.caption("Visualizing Kafka ingestion, Medallion processing (Bronze/Silver/Gold), and SSH infrastructure tools.")
     
     import data_pipeline
@@ -371,7 +432,7 @@ elif page == "Data Platform & Lake":
     
     # 2. SSH Infrastructure reference console
     st.markdown("### SSH & Operations Console Reference")
-    st.info("Below are the exact security and operations console commands taught in the training to remote into production nodes, configure keys, and tunnel ports.")
+    st.info("Below are the exact security and operations console commands remote into production nodes, configure keys, and tunnel ports.")
     
     ssh_left, ssh_right = st.columns(2)
     with ssh_left:

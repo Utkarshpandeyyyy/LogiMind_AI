@@ -1,7 +1,7 @@
-
 from __future__ import annotations
 from dataclasses import dataclass, asdict
 import pandas as pd
+import re
 
 WEATHER_RISK = {"Clear": 0, "Rain": 2, "Heavy Rain": 6, "Storm": 10}
 TRAFFIC_RISK = {"Low": 0, "Medium": 1.5, "High": 4, "Severe": 8}
@@ -103,55 +103,134 @@ def recommend_for_row(row: pd.Series) -> dict:
     )
     return asdict(result)
 
-def answer_copilot(question: str, shipments: pd.DataFrame, warehouses: pd.DataFrame) -> str:
-    q = question.lower().strip()
-
-    if "highest risk" in q or "most risky" in q:
-        row = shipments.sort_values("risk_score", ascending=False).iloc[0]
-        return (
-            f"{row.shipment_id} has the highest risk score at {row.risk_score}/100. "
-            f"It is travelling from {row.origin} to {row.destination}. "
-            f"Primary drivers are {row.weather.lower()} weather and {row.traffic.lower()} traffic. "
-            f"Recommended action: reroute and reserve a backup vehicle."
+def validate_query(query: str) -> tuple[bool, str]:
+    q_clean = query.lower().strip()
+    words = set(re.findall(r'\b\w+\b', q_clean))
+    
+    # Check for tech terms
+    tech_keywords = {
+        'ssh', 'kafka', 'zookeeper', 'docker', 'compose', 'port', 'tunnel', 'keygen', 
+        'python', 'code', 'git', 'architecture', 'medallion', 'pipeline', 'database', 
+        'react', 'streamlit', 'framework', 'api', 'vm', 'virtual machine', 'cloud', 
+        'ip address', 'server', 'deploy', 'cluster', 'table', 'query', 'sql', 'schema', 
+        'branch', 'merge', 'commit', 'pull', 'push', 'repository', 'caching', 'cache', 
+        'redis', 'fastapi', 'grpc', 'rest', 'frontend', 'backend', 'widget', 'slider', 
+        'selectbox', 'button', 'javascript', 'sk-learn', 'scikit-learn', 'numpy', 'pandas', 
+        'networkx', 'import', 'class', 'function', 'method', 'variable', 'loop', 'terminal', 
+        'command', 'powershell', 'bash', 'script', 'linux', 'windows', 'key', 'keys', 
+        'tunneling', 'scp'
+    }
+    
+    matched_tech = words.intersection(tech_keywords)
+    if matched_tech:
+        return False, (
+            "I cannot answer technical or programming questions (such as database schemas, "
+            "Kafka, SSH, Docker, or code details). I only answer questions related to the business "
+            "and operational work of the LogiMind AI project (orders, shipments, warehouses, delays, and routes)."
         )
+        
+    return True, ""
 
-    if "chennai" in q and ("close" in q or "closed" in q or "flood" in q):
+def answer_copilot(question: str, shipments: pd.DataFrame, warehouses: pd.DataFrame) -> str:
+    # First validate query to block technical questions
+    is_valid, validation_msg = validate_query(question)
+    if not is_valid:
+        return validation_msg
+        
+    q = question.lower().strip()
+    
+    # 1. Route order details, tracking, vehicle, driver, and delivery-related queries to PostgreSQL via LangGraph
+    order_keywords = ["order", "track", "delivery", "vehicle", "driver", "where is", "how long", "delayed", "delay"]
+    order_id_match = re.search(r'\b(ord-\d+|shp-\d+)\b', q)
+    if order_id_match or any(x in q for x in order_keywords):
+        from order_agent import process_order_query
+        try:
+            return process_order_query(question)
+        except Exception as e:
+            order_code = order_id_match.group(0).upper() if order_id_match else "your order"
+            return (
+                f"### Database Integration Status\n\n"
+                f"I detected that you are asking about order tracking or dispatch details for **{order_code}**.\n\n"
+                f"To resolve order tracking, driver contact information, and vehicle numbers in real-time, the system requires a Postgres database backend. "
+                f"Please ensure you have started the database container using docker-compose and run the initialization script:\n"
+                f"```bash\n"
+                f"docker-compose up -d postgres\n"
+                f"python db_setup.py\n"
+                f"```\n\n"
+                f"*Technical details: Connection to PostgreSQL failed ({e}).*"
+            )
+            
+    # 2. Check for dynamic hub closures (any of the 4 hubs)
+    matched_city = None
+    for city in ["delhi", "mumbai", "bengaluru", "chennai"]:
+        if city in q:
+            matched_city = city.capitalize()
+            break
+            
+    if matched_city and any(x in q for x in ["close", "closed", "flood", "failure", "offline", "shutdown", "stop", "shut", "down", "closure", "disrupt", "overcome"]):
         impacted = shipments[
-            (shipments.origin.eq("Chennai")) | (shipments.destination.eq("Chennai"))
+            (shipments.origin.eq(matched_city)) | (shipments.destination.eq(matched_city))
         ]
         exposure = int(impacted.shipment_value_inr.sum())
+        
+        redirect_hubs = {
+            "Delhi": "Mumbai Hub or Jaipur Hub",
+            "Mumbai": "Delhi Hub or Bengaluru Hub",
+            "Bengaluru": "Chennai Hub or Hyderabad Hub",
+            "Chennai": "Bengaluru Hub or Hyderabad Hub"
+        }
+        fallback_hub = redirect_hubs.get(matched_city, "the nearest healthy hub")
+        
         return (
-            f"Closing Chennai affects {len(impacted)} active shipments with approximately "
-            f"₹{exposure:,.0f} in value. Recommended plan: redirect critical orders to Bengaluru, "
-            f"move standard orders to Hyderabad, and notify customers with SLA risk above 50%."
+            f"Simulating node closure for **{matched_city} Hub**:\n\n"
+            f"- **Affected Shipments**: {len(impacted)} active route segments.\n"
+            f"- **Financial Exposure**: ₹{exposure:,.0f} in transit value.\n"
+            f"- **Mitigation Recommendation**: Redirect critical orders to {fallback_hub}, move standard orders to alternate hubs, and notify customers with SLA risk above 50%."
         )
-
-    if "delayed" in q:
-        delayed = shipments[shipments.status.eq("Delayed")]
-        return (
-            f"There are {len(delayed)} delayed shipments. "
-            f"The average predicted delay is {delayed.predicted_delay_hours.mean():.1f} hours. "
-            f"Most common controllable cause: traffic and warehouse congestion."
-        )
-
-    if "warehouse" in q and "risk" in q:
-        risky = warehouses.sort_values("capacity_pct", ascending=False).iloc[0]
-        return (
-            f"{risky.warehouse} is currently the most stressed hub at "
-            f"{risky.capacity_pct}% capacity. Recommended action: divert new inbound volume "
-            f"to the nearest hub until utilisation falls below 80%."
-        )
-
-    if "save" in q or "cost" in q:
+        
+    # 3. Check for Cost Optimization queries
+    if "save" in q or "cost" in q or "optimis" in q or "optimiz" in q:
         high_risk = shipments[shipments.risk_score >= 60]
         potential = int(high_risk.shipment_value_inr.sum() * 0.035)
         return (
-            f"Prioritising the {len(high_risk)} highest-risk shipments could protect roughly "
-            f"₹{potential:,.0f} in avoidable penalties and expedited-delivery cost."
+            f"To optimize and boost logistics cost savings:\n\n"
+            f"1. **Expedite High-Risk Shipments**: Prioritizing the **{len(high_risk)}** highest-risk shipments (Risk Score >= 60) can protect approximately **₹{potential:,.0f}** by avoiding SLA delay penalties.\n"
+            f"2. **Dynamic Route Rerouting**: Rerouting vehicles around high-traffic or storm areas reduces fuel costs and delay penalties.\n"
+            f"3. **Load Balancing**: Prevent warehouse overloading by shifting picking and fulfillment to less busy hubs, avoiding warehouse overtime costs."
         )
-
+        
+    # 4. Check if it matches other structured queries from the dashboard
+    if "highest risk" in q or "most risky" in q:
+        row = shipments.sort_values("risk_score", ascending=False).iloc[0]
+        return (
+            f"Active Shipment **{row.shipment_id}** currently presents the highest risk in the network at **{row.risk_score}/100**.\n\n"
+            f"- **Route**: {row.origin} ➔ {row.destination}\n"
+            f"- **Conditions**: Weather is {row.weather.lower()}, Traffic load is {row.traffic.lower()}.\n"
+            f"- **Recommended Mitigation Action**: Reroute through alternative corridor and reserve a backup vehicle."
+        )
+        
+    if "delayed" in q:
+        delayed = shipments[shipments.status.eq("Delayed")]
+        return (
+            f"There are **{len(delayed)}** delayed shipments currently in transit.\n\n"
+            f"- **Average Delay**: {delayed.predicted_delay_hours.mean():.1f} hours.\n"
+            f"- **Top Controllable Causes**: Traffic congestion and warehouse load spikes."
+        )
+        
+    if "warehouse" in q and "risk" in q:
+        risky = warehouses.sort_values("capacity_pct", ascending=False).iloc[0]
+        return (
+            f"The warehouse hub presenting the highest stress is **{risky.warehouse}** running at **{risky.capacity_pct}%** capacity.\n\n"
+            f"- **Mitigation Action**: Divert new logistics volume to the nearest healthy hub until utilization drops below 80%."
+        )
+        
+    # 5. Friendly operational fallback
     return (
-        "I can analyse shipment risk, delayed orders, warehouse stress, disruption scenarios, "
-        "potential savings and Chennai-warehouse closure impact. Try asking: "
-        "'Which shipment has the highest risk?'"
+        "I am the Virtual Pilot AI. I can answer questions regarding:\n"
+        "- Order details, current locations, and remaining ETA (e.g. 'where is order ORD-1001')\n"
+        "- Driver contact details and vehicle numbers (e.g. 'who is the driver for order ORD-1002')\n"
+        "- Delay reasons and operational mitigation steps (e.g. 'why is order ORD-1001 delayed')\n"
+        "- Node failure simulations (e.g. 'what happens if Chennai Hub closes')\n"
+        "- Savings and cost optimizations (e.g. 'how to cut costs')\n\n"
+        "Please ask a question related to these operational topics."
     )

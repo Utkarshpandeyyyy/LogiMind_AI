@@ -41,3 +41,18 @@ services:
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
       logging.level.root: ERROR
       logging.level.com.provectus: ERROR
+
+  postgres:
+    image: postgres:15
+    container_name: logimind-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: logimind
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
