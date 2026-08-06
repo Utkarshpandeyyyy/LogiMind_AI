@@ -5,6 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 import networkx as nx
+import json
 
 from engine import simulate, risk_level, answer_copilot
 
@@ -51,7 +52,7 @@ st.sidebar.title("LogiMind AI")
 st.sidebar.caption("Autonomous Supply Chain Decision Intelligence")
 page = st.sidebar.radio(
     "Navigate",
-    ["Executive Control Tower", "Digital Twin Simulator", "Network Intelligence", "AI Copilot"],
+    ["Executive Control Tower", "Digital Twin Simulator", "Network Intelligence", "AI Copilot", "Data Platform & Lake"],
 )
 
 st.sidebar.divider()
@@ -299,3 +300,108 @@ elif page == "AI Copilot":
             )
         else:
             st.warning("Enter a question first.")
+
+elif page == "Data Platform & Lake":
+    st.subheader("Medallion Data Pipeline & Local Data Lake")
+    st.caption("Visualizing Kafka ingestion, Medallion processing (Bronze/Silver/Gold), and SSH infrastructure tools.")
+    
+    import data_pipeline
+    
+    # 1. Pipeline Execution Control
+    col1, col2 = st.columns([1, 1.25])
+    with col1:
+        st.markdown("### Pipeline Execution")
+        st.info("Trigger a mock cycle of the data pipeline. This simulates Kafka event streaming, cleans raw logs, and regenerates Gold analytical metrics.")
+        if st.button("Run Ingestion Pipeline", type="primary", use_container_width=True):
+            with st.spinner("Processing pipeline layers (Bronze → Silver → Gold)..."):
+                kpi_data = data_pipeline.execute_full_pipeline()
+                if kpi_data:
+                    st.success("Pipeline executed successfully!")
+                else:
+                    st.error("Pipeline run failed.")
+                    
+        # Display folder stats
+        bronze_count = len(list(data_pipeline.BRONZE_DIR.glob("*.json"))) if data_pipeline.BRONZE_DIR.exists() else 0
+        silver_count = len(list(data_pipeline.SILVER_DIR.glob("*.csv"))) if data_pipeline.SILVER_DIR.exists() else 0
+        gold_exists = (data_pipeline.GOLD_DIR / "kpi_dashboard.json").exists()
+        
+        st.markdown("#### Data Lake Inventory")
+        st.markdown(f"- 📁 **Bronze Zone (Raw JSON)**: `{bronze_count}` file(s)")
+        st.markdown(f"- 📁 **Silver Zone (Clean CSV)**: `{silver_count}` file(s)")
+        st.markdown(f"- 📁 **Gold Zone (KPI Metrics)**: `{'1' if gold_exists else '0'}` file(s)")
+        
+    with col2:
+        st.markdown("### Medallion Pipeline Architecture")
+        # Visual diagram of the architecture using HTML/CSS
+        st.markdown("""
+        <div style="background: rgba(128,128,128,0.1); padding: 1.2rem; border-radius: 12px; border: 1px solid rgba(128,128,128,0.2);">
+          <div style="display: flex; justify-content: space-between; align-items: center; text-align: center;">
+            <div style="flex: 1; padding: 0.5rem; background: #3b2314; border-radius: 8px; margin: 0 4px;">
+              <strong style="color: #d97706;">Bronze Zone</strong><br/>
+              <span style="font-size: 0.8rem; color: #f59e0b;">Raw Ingestion</span>
+            </div>
+            <div style="color: #cbd5e1;">➔</div>
+            <div style="flex: 1; padding: 0.5rem; background: #1e293b; border-radius: 8px; margin: 0 4px;">
+              <strong style="color: #94a3b8;">Silver Zone</strong><br/>
+              <span style="font-size: 0.8rem; color: #cbd5e1;">Cleaned & Valid</span>
+            </div>
+            <div style="color: #cbd5e1;">➔</div>
+            <div style="flex: 1; padding: 0.5rem; background: #133b1e; border-radius: 8px; margin: 0 4px;">
+              <strong style="color: #16a34a;">Gold Zone</strong><br/>
+              <span style="font-size: 0.8rem; color: #4ade80;">Aggregated KPIs</span>
+            </div>
+          </div>
+          <div style="margin-top: 1rem; font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">
+            <strong>Mock Kafka Broker</strong> status: <code>Running (Simulated)</code><br/>
+            <strong>Ingestion Source</strong>: Streaming device logs mock (<code>shipments.csv</code>)<br/>
+            <strong>Storage Format</strong>: Structured Local directories (S3-compatible folder mock)
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Display preview of Gold KPI if exists
+        gold_path = data_pipeline.GOLD_DIR / "kpi_dashboard.json"
+        if gold_path.exists():
+            st.markdown("#### Latest Gold Dashboard KPIs")
+            with open(gold_path, "r") as f:
+                kpi_data = json.load(f)
+            st.json(kpi_data)
+            
+    st.divider()
+    
+    # 2. SSH Infrastructure reference console
+    st.markdown("### SSH & Operations Console Reference")
+    st.info("Below are the exact security and operations console commands taught in the training to remote into production nodes, configure keys, and tunnel ports.")
+    
+    ssh_left, ssh_right = st.columns(2)
+    with ssh_left:
+        st.markdown("#### SSH Command Guide")
+        st.code("""
+# 1. Generate SSH Key pair (Ed25519)
+ssh-keygen -t ed25519 -b 4096 -C "admin@logimind.ai"
+
+# 2. Copy Public Key to remote host
+ssh-copy-id -i ~/.ssh/id_ed25519.pub root@192.168.1.100
+
+# 3. Securely connect to your remote node
+ssh -i ~/.ssh/id_ed25519 root@192.168.1.100
+
+# 4. Check running Docker containers on server
+ssh root@192.168.1.100 "docker ps"
+        """, language="bash")
+        
+    with ssh_right:
+        st.markdown("#### Kafka Tunneling & SCP Guide")
+        st.code("""
+# 1. Forward remote Kafka broker (9092) and UI (8080) to localhost
+ssh -L 9092:localhost:9092 -L 8080:localhost:8080 root@192.168.1.100 -N
+
+# 2. Verify local connectivity to forwarded Kafka
+kafkacat -b localhost:9092 -L
+
+# 3. SCP: Send file to remote server Data Lake
+scp ./data/shipments.csv root@192.168.1.100:/opt/datalake/bronze/
+
+# 4. SCP: Backup gold report from remote to local
+scp root@192.168.1.100:/opt/datalake/gold/kpi_dashboard.json ./backups/
+        """, language="bash")
