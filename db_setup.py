@@ -77,9 +77,10 @@ def setup_database():
     cur.execute("""
     CREATE TABLE warehouses (
         warehouse VARCHAR(100) PRIMARY KEY,
-        latitude DOUBLE PRECISION NOT NULL,
-        longitude DOUBLE PRECISION NOT NULL,
-        capacity_pct INT NOT NULL
+        city VARCHAR(100) NOT NULL,
+        capacity_pct INT NOT NULL,
+        inventory_units INT NOT NULL,
+        status VARCHAR(50) NOT NULL
     );
     """)
     
@@ -128,7 +129,7 @@ def setup_database():
     wh_df = pd.read_csv(WH_CSV_PATH)
     wh_records = [tuple(x) for x in wh_df.to_numpy()]
     insert_wh_query = """
-    INSERT INTO warehouses (warehouse, latitude, longitude, capacity_pct) VALUES %s;
+    INSERT INTO warehouses (warehouse, city, capacity_pct, inventory_units, status) VALUES %s;
     """
     execute_values(cur, insert_wh_query, wh_records)
     

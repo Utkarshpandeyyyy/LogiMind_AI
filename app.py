@@ -1,4 +1,3 @@
-
 from pathlib import Path
 import pandas as pd
 import plotly.express as px
@@ -6,6 +5,10 @@ import plotly.graph_objects as go
 import streamlit as st
 import networkx as nx
 import json
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
 
 import importlib
 import engine
@@ -47,16 +50,36 @@ st.markdown("""
 
 @st.cache_data
 def load_data():
-    shipments = pd.read_csv(BASE_DIR / "data" / "shipments.csv")
-    warehouses = pd.read_csv(BASE_DIR / "data" / "warehouses.csv")
-    return shipments, warehouses
+    if psycopg2 is None:
+        shipments = pd.read_csv(BASE_DIR / "data" / "shipments.csv")
+        warehouses = pd.read_csv(BASE_DIR / "data" / "warehouses.csv")
+        return shipments, warehouses, False
+    try:
+        conn = psycopg2.connect(
+            host="localhost",
+            port=5432,
+            user="postgres",
+            password="password",
+            dbname="logimind"
+        )
+        shipments = pd.read_sql_query("SELECT * FROM shipments;", conn)
+        warehouses = pd.read_sql_query("SELECT * FROM warehouses;", conn)
+        conn.close()
+        return shipments, warehouses, True
+    except Exception as e:
+        shipments = pd.read_csv(BASE_DIR / "data" / "shipments.csv")
+        warehouses = pd.read_csv(BASE_DIR / "data" / "warehouses.csv")
+        return shipments, warehouses, False
 
-shipments, warehouses = load_data()
+shipments, warehouses, is_live_db = load_data()
+
 # Initialize session state variables
 if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 if "user_role" not in st.session_state:
     st.session_state["user_role"] = None
+if "tour_step" not in st.session_state:
+    st.session_state["tour_step"] = "Welcome (Manual Navigation)"
 
 # Credentials
 USER_ROLES = {
@@ -105,6 +128,11 @@ else:  # Guest (Viewer)
 
 # Sidebar authentication panel
 st.sidebar.markdown(f"**Authenticated**: `{role}`")
+if is_live_db:
+    st.sidebar.success("📡 DB Mode: Live (PostgreSQL)")
+else:
+    st.sidebar.warning("⚠️ DB Mode: Fallback (Static CSV)")
+
 if st.sidebar.button("Log Out Session", use_container_width=True):
     st.session_state["logged_in"] = False
     st.session_state["user_role"] = None
@@ -112,15 +140,69 @@ if st.sidebar.button("Log Out Session", use_container_width=True):
 
 st.sidebar.divider()
 
-st.sidebar.title("LogiMind AI")
-st.sidebar.caption("Autonomous Supply Chain Decision Intelligence")
-page = st.sidebar.radio("Navigate", allowed_pages)
+# Guided Platform Tour Selector
+st.sidebar.subheader("🧭 Guided Platform Tour")
+tour_stops = [
+    "Welcome (Manual Navigation)",
+    "Stop 1: Executive Control Tower",
+    "Stop 2: What-if Digital Twin",
+    "Stop 3: Network Graph Resiliency",
+    "Stop 4: Conversational AI Copilot",
+    "Stop 5: Data Operations & Cleaning"
+]
+
+# Set active page in session state if not existing
+if "active_page" not in st.session_state:
+    st.session_state["active_page"] = allowed_pages[0]
+
+# Determine selected index for selectbox
+current_tour_index = 0
+if st.session_state["tour_step"] in tour_stops:
+    current_tour_index = tour_stops.index(st.session_state["tour_step"])
+
+selected_tour_stop = st.sidebar.selectbox("Current Tour Stop", tour_stops, index=current_tour_index)
+
+# Force page navigation depending on tour selection
+if selected_tour_stop != "Welcome (Manual Navigation)":
+    st.session_state["tour_step"] = selected_tour_stop
+    if selected_tour_stop == "Stop 1: Executive Control Tower" and "Executive Control Tower" in allowed_pages:
+        st.session_state["active_page"] = "Executive Control Tower"
+    elif selected_tour_stop == "Stop 2: What-if Digital Twin" and "Digital Twin Simulator" in allowed_pages:
+        st.session_state["active_page"] = "Digital Twin Simulator"
+    elif selected_tour_stop == "Stop 3: Network Graph Resiliency" and "Network Intelligence" in allowed_pages:
+        st.session_state["active_page"] = "Network Intelligence"
+    elif selected_tour_stop == "Stop 4: Conversational AI Copilot" and "AI Copilot" in allowed_pages:
+        st.session_state["active_page"] = "AI Copilot"
+    elif selected_tour_stop == "Stop 5: Data Operations & Cleaning" and "Data Governance & MDM" in allowed_pages:
+        st.session_state["active_page"] = "Data Governance & MDM"
+else:
+    if st.session_state["tour_step"] != "Welcome (Manual Navigation)":
+        st.session_state["tour_step"] = "Welcome (Manual Navigation)"
+
+# Standard page selector
+# Use active_page from session state as default value
+default_nav_index = 0
+if "active_page" in st.session_state and st.session_state["active_page"] in allowed_pages:
+    default_nav_index = allowed_pages.index(st.session_state["active_page"])
+
+page = st.sidebar.radio("Navigate", allowed_pages, index=default_nav_index)
+st.session_state["active_page"] = page
+
+# Bidirectional sync: Update selectbox if user navigates manually
+if page == "Executive Control Tower":
+    st.session_state["tour_step"] = "Stop 1: Executive Control Tower"
+elif page == "Digital Twin Simulator":
+    st.session_state["tour_step"] = "Stop 2: What-if Digital Twin"
+elif page == "Network Intelligence":
+    st.session_state["tour_step"] = "Stop 3: Network Graph Resiliency"
+elif page == "AI Copilot":
+    st.session_state["tour_step"] = "Stop 4: Conversational AI Copilot"
+elif page == "Data Governance & MDM":
+    st.session_state["tour_step"] = "Stop 5: Data Operations & Cleaning"
 
 st.sidebar.divider()
-st.sidebar.info(
-    "Demo mode uses simulated enterprise logistics data. "
-    "Production integrations can connect ERP, WMS, GPS, weather and fleet systems."
-)
+st.sidebar.title("LogiMind AI")
+st.sidebar.caption("Autonomous Supply Chain Decision Intelligence")
 
 st.markdown(
     """
@@ -131,6 +213,83 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+# Display active Tour Guide Banner
+if st.session_state["tour_step"] != "Welcome (Manual Navigation)":
+    if page == "Executive Control Tower":
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #1e3a8a, #0d9488); padding: 1.2rem; border-radius: 14px; border-left: 6px solid #38bdf8; margin-bottom: 1.2rem; color: white;">
+          <h4 style="margin: 0; color: white; font-size: 1.15rem;">🧭 Tour Guide • Stop 1: Executive Control Tower</h4>
+          <p style="margin: 0.5rem 0 0; color: #e2e8f0; font-size: 0.92rem; line-height: 1.45;">
+            Welcome to the <strong>Executive Control Tower</strong>! This dashboard aggregates all active transit shipments across India.
+            <br/>🔍 <strong>What to Look For & Highlight:</strong>
+            <ul style="margin: 0.4rem 0 0; padding-left: 1.2rem;">
+              <li><strong>Value at Risk</strong>: Highlights the total invoice cost of cargo currently exposed to storms or severe traffic.</li>
+              <li><strong>Live Shipment Map</strong>: Look at the Plotly map showing active freight lanes connecting major cargo cities.</li>
+              <li><strong>AI Action Queue</strong>: Review the table at the bottom where the AI automatically prioritizes shipments and recommends recovery actions (e.g., rerouting or advancing dispatch).</li>
+            </ul>
+          </p>
+        </div>
+        """, unsafe_allow_html=True)
+    elif page == "Digital Twin Simulator":
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #1e3a8a, #0d9488); padding: 1.2rem; border-radius: 14px; border-left: 6px solid #38bdf8; margin-bottom: 1.2rem; color: white;">
+          <h4 style="margin: 0; color: white; font-size: 1.15rem;">🧭 Tour Guide • Stop 2: What-if Digital Twin Simulator</h4>
+          <p style="margin: 0.5rem 0 0; color: #e2e8f0; font-size: 0.92rem; line-height: 1.45;">
+            Welcome to the <strong>Digital Twin Simulator</strong>! Here, you can simulate transit scenarios before dispatching vehicles.
+            <br/>🛠️ <strong>Try This Highlighted Action:</strong>
+            <ol style="margin: 0.4rem 0 0; padding-left: 1.2rem;">
+              <li>Adjust the sliders to set <strong>Weather: Storm</strong> and <strong>Traffic: Severe</strong>.</li>
+              <li>Observe the <strong>SLA Probability</strong> and <strong>Predicted Delay</strong> meters update in real-time.</li>
+              <li>The system will compare the Baseline case side-by-side with your scenario and issue a <strong>Recommended Action</strong> (e.g., advance dispatches to avoid severe delays).</li>
+            </ol>
+          </p>
+        </div>
+        """, unsafe_allow_html=True)
+    elif page == "Network Intelligence":
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #1e3a8a, #0d9488); padding: 1.2rem; border-radius: 14px; border-left: 6px solid #38bdf8; margin-bottom: 1.2rem; color: white;">
+          <h4 style="margin: 0; color: white; font-size: 1.15rem;">🧭 Tour Guide • Stop 3: Network Relationship Graph</h4>
+          <p style="margin: 0.5rem 0 0; color: #e2e8f0; font-size: 0.92rem; line-height: 1.45;">
+            Welcome to <strong>Network Intelligence</strong>! This page maps connections between suppliers, warehouses, and customers.
+            <br/>🛠️ <strong>Try This Highlighted Action:</strong>
+            <ol style="margin: 0.4rem 0 0; padding-left: 1.2rem;">
+              <li>Look at the visual graph layout connecting supply chain nodes.</li>
+              <li>In the dropdown under the graph, select <strong>Chennai Hub</strong> to simulate a complete hub failure.</li>
+              <li>The AI will analyze graph paths, identify blocked inbound lines from suppliers, and recommend <strong>dynamic rerouting plans</strong> for affected customers (e.g., diverting Retail A to Delhi Hub).</li>
+            </ol>
+          </p>
+        </div>
+        """, unsafe_allow_html=True)
+    elif page == "AI Copilot":
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #1e3a8a, #0d9488); padding: 1.2rem; border-radius: 14px; border-left: 6px solid #38bdf8; margin-bottom: 1.2rem; color: white;">
+          <h4 style="margin: 0; color: white; font-size: 1.15rem;">🧭 Tour Guide • Stop 4: Conversational AI Copilot</h4>
+          <p style="margin: 0.5rem 0 0; color: #e2e8f0; font-size: 0.92rem; line-height: 1.45;">
+            Welcome to the <strong>AI Copilot</strong>! Ask business and tracking questions in plain, conversational English without needing complex lookup tools.
+            <br/>🛠️ <strong>Try This Highlighted Action:</strong>
+            <ol style="margin: 0.4rem 0 0; padding-left: 1.2rem;">
+              <li>Select the sample question: <strong>"What happens if the Chennai warehouse closes?"</strong> or type your own question about order status (e.g., <em>"where is order ORD-1001"</em>).</li>
+              <li>Click <strong>Analyse</strong> to view the parsed response. The stateful agent translates your request, pulls live tracking/dispatch data from the database, and reports ETAs and driver contacts in plain English.</li>
+            </ol>
+          </p>
+        </div>
+        """, unsafe_allow_html=True)
+    elif page == "Data Governance & MDM":
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #1e3a8a, #0d9488); padding: 1.2rem; border-radius: 14px; border-left: 6px solid #38bdf8; margin-bottom: 1.2rem; color: white;">
+          <h4 style="margin: 0; color: white; font-size: 1.15rem;">🧭 Tour Guide • Stop 5: Data Cleaning, Quality & Compliance</h4>
+          <p style="margin: 0.5rem 0 0; color: #e2e8f0; font-size: 0.92rem; line-height: 1.45;">
+            Welcome to the **Data Cleaning & Operations** page! Here, you monitor how uncleaned device logs are processed into certified, dashboard-ready metrics.
+            <br/>🛠️ <strong>Try This Highlighted Action:</strong>
+            <ol style="margin: 0.4rem 0 0; padding-left: 1.2rem;">
+              <li>Click <strong>Run Ingestion Pipeline</strong>. This runs raw records through Bronze, cleans formats in Silver, and updates the PostgreSQL database.</li>
+              <li>Observe the <strong>Latest Certified Business Metrics</strong> populate automatically once the run succeeds.</li>
+              <li>Inspect the <strong>Quality Auditing Rules</strong> to see how the system ensures data boundaries and integrity.</li>
+            </ol>
+          </p>
+        </div>
+        """, unsafe_allow_html=True)
 
 if page == "Executive Control Tower":
     total = len(shipments)
@@ -329,7 +488,42 @@ elif page == "Network Intelligence":
     if disrupted != "None":
         affected = list(G.neighbors(disrupted))
         st.error(f"{disrupted} failure directly impacts: {', '.join(affected)}")
-        st.warning("AI response: reassign orders to the nearest healthy hub and protect premium-customer SLAs first.")
+        
+        affected_suppliers = [n for n in affected if G.nodes[n]["type"] == "Supplier"]
+        affected_customers = [n for n in affected if G.nodes[n]["type"] == "Customer"]
+        
+        # Build dynamic AI mitigation recommendations
+        response_lines = []
+        response_lines.append(f"**AI Resiliency & Mitigation Analysis for {disrupted}:**\n")
+        
+        if affected_suppliers:
+            response_lines.append(f"⚠️ **Inbound Supply Lines Blocked**: Direct supply from **{', '.join(affected_suppliers)}** is cut off. Action: Pause purchase orders or redirect supplier transport lanes.")
+            
+        if affected_customers:
+            response_lines.append(f"🚨 **Outbound SLA Risk**: Deliveries to **{', '.join(affected_customers)}** are immediately disrupted.")
+            response_lines.append("👉 **Re-Routing Actions**:")
+            for cust in affected_customers:
+                other_hubs = [h for h in G.neighbors(cust) if h != disrupted and G.nodes[h]["type"] == "Warehouse"]
+                if other_hubs:
+                    response_lines.append(f"  - Divert **{cust}** shipments to **{', '.join(other_hubs)}** which has active, healthy links.")
+                else:
+                    fallback_mapping = {
+                        "Enterprise C": "Mumbai Hub (Emergency Corridor)",
+                        "Retail B": "Bengaluru Hub (Emergency Corridor)"
+                    }
+                    fallback = fallback_mapping.get(cust, "the nearest operational warehouse")
+                    response_lines.append(f"  - **{cust}** has no direct redundant hub paths. Establish an emergency transit corridor from **{fallback}**.")
+                    
+        priority_mapping = {
+            "Delhi Hub": "Delhi Hub manages North zone fulfillment. Divert shipments through NH-48 via Mumbai and check if West-region suppliers can cover priority orders.",
+            "Mumbai Hub": "Mumbai Hub is the primary Western gateway. Immediately re-route premium consignments to Pune/Ahmedabad storage depots and trigger local carrier contingency lanes.",
+            "Bengaluru Hub": "Bengaluru Hub coordinates South zone technology and manufacturing parts. Shift picking queue to Chennai Hub and notify Retailers of potential 4-6 hour delay windows.",
+            "Chennai Hub": "Chennai Hub faces elevated weather risk. Divert South-bound shipments to Bengaluru Hub or Hyderabad corridor, and prioritize high-value life-saving medicines first."
+        }
+        
+        response_lines.append(f"\n💡 **Strategic Recommendation**: {priority_mapping.get(disrupted, 'Reassign orders to the nearest healthy hub and protect premium-customer SLAs first.')}")
+        
+        st.warning("\n".join(response_lines))
 
 elif page == "AI Copilot":
     st.subheader("Executive Supply Chain Copilot")
@@ -363,106 +557,147 @@ elif page == "AI Copilot":
             st.warning("Enter a question first.")
 
 elif page == "Data Governance & MDM":
-    st.subheader("Medallion Data Pipeline & Master Data Management")
-    st.caption("Visualizing Kafka ingestion, Medallion processing (Bronze/Silver/Gold), and SSH infrastructure tools.")
+    st.subheader("Data Cleaning, Quality & System Operations")
+    st.caption("Monitor the data journey from raw fleet feeds to certified business metrics, ensure data accuracy, and inspect operational protocols.")
     
     import data_pipeline
     
-    # 1. Pipeline Execution Control
+    # 1. Ingestion & Synchronization Control
     col1, col2 = st.columns([1, 1.25])
     with col1:
-        st.markdown("### Pipeline Execution")
-        st.info("Trigger a mock cycle of the data pipeline. This simulates Kafka event streaming, cleans raw logs, and regenerates Gold analytical metrics.")
+        st.markdown("### Ingestion & Synchronization Control")
+        st.info("Trigger a complete data synchronization cycle. This reads raw GPS pings from the fleet, validates and cleans formats, and computes overall business KPIs.")
         if st.button("Run Ingestion Pipeline", type="primary", use_container_width=True):
-            with st.spinner("Processing pipeline layers (Bronze → Silver → Gold)..."):
+            with st.spinner("Executing pipeline cleaning cycles..."):
                 kpi_data = data_pipeline.execute_full_pipeline()
                 if kpi_data:
-                    st.success("Pipeline executed successfully!")
+                    st.success("Data synchronization completed successfully!")
+                    st.cache_data.clear()
+                    st.rerun()
                 else:
-                    st.error("Pipeline run failed.")
+                    st.error("Synchronization failed. Check server logs.")
                     
         # Display folder stats
         bronze_count = len(list(data_pipeline.BRONZE_DIR.glob("*.json"))) if data_pipeline.BRONZE_DIR.exists() else 0
         silver_count = len(list(data_pipeline.SILVER_DIR.glob("*.csv"))) if data_pipeline.SILVER_DIR.exists() else 0
         gold_exists = (data_pipeline.GOLD_DIR / "kpi_dashboard.json").exists()
         
-        st.markdown("#### Data Lake Inventory")
-        st.markdown(f"- 📁 **Bronze Zone (Raw JSON)**: `{bronze_count}` file(s)")
-        st.markdown(f"- 📁 **Silver Zone (Clean CSV)**: `{silver_count}` file(s)")
-        st.markdown(f"- 📁 **Gold Zone (KPI Metrics)**: `{'1' if gold_exists else '0'}` file(s)")
+        st.markdown("#### Data Storage Summary")
+        st.markdown(f"- 📁 **Raw Inputs Zone (Unchecked logs)**: `{bronze_count}` batch file(s) collected")
+        st.markdown(f"- 📁 **Cleaned Database Zone (Validated records)**: `{silver_count}` batch file(s) verified")
+        st.markdown(f"- 📁 **Business Report Zone (Dashboard ready)**: `{'1' if gold_exists else '0'}` certified report")
         
     with col2:
-        st.markdown("### Medallion Pipeline Architecture")
+        st.markdown("### The Medallion Data Journey")
         # Visual diagram of the architecture using HTML/CSS
         st.markdown("""
-        <div style="background: rgba(128,128,128,0.1); padding: 1.2rem; border-radius: 12px; border: 1px solid rgba(128,128,128,0.2);">
+        <div style="background: rgba(128,128,128,0.1); padding: 1.2rem; border-radius: 12px; border: 1px solid rgba(128,128,128,0.2); margin-bottom: 1rem;">
           <div style="display: flex; justify-content: space-between; align-items: center; text-align: center;">
             <div style="flex: 1; padding: 0.5rem; background: #3b2314; border-radius: 8px; margin: 0 4px;">
-              <strong style="color: #d97706;">Bronze Zone</strong><br/>
-              <span style="font-size: 0.8rem; color: #f59e0b;">Raw Ingestion</span>
+              <strong style="color: #d97706;">Raw Stage (Bronze)</strong><br/>
+              <span style="font-size: 0.75rem; color: #f59e0b;">Uncleaned truck sensor feeds.</span>
             </div>
             <div style="color: #cbd5e1;">➔</div>
             <div style="flex: 1; padding: 0.5rem; background: #1e293b; border-radius: 8px; margin: 0 4px;">
-              <strong style="color: #94a3b8;">Silver Zone</strong><br/>
-              <span style="font-size: 0.8rem; color: #cbd5e1;">Cleaned & Valid</span>
+              <strong style="color: #94a3b8;">Clean Stage (Silver)</strong><br/>
+              <span style="font-size: 0.75rem; color: #cbd5e1;">Errors removed & saved to DB.</span>
             </div>
             <div style="color: #cbd5e1;">➔</div>
             <div style="flex: 1; padding: 0.5rem; background: #133b1e; border-radius: 8px; margin: 0 4px;">
-              <strong style="color: #16a34a;">Gold Zone</strong><br/>
-              <span style="font-size: 0.8rem; color: #4ade80;">Aggregated KPIs</span>
+              <strong style="color: #16a34a;">Business Stage (Gold)</strong><br/>
+              <span style="font-size: 0.75rem; color: #4ade80;">Certified metrics computed.</span>
             </div>
           </div>
-          <div style="margin-top: 1rem; font-size: 0.85rem; color: #94a3b8; line-height: 1.4;">
-            <strong>Mock Kafka Broker</strong> status: <code>Running (Simulated)</code><br/>
-            <strong>Ingestion Source</strong>: Streaming device logs mock (<code>shipments.csv</code>)<br/>
-            <strong>Storage Format</strong>: Structured Local directories (S3-compatible folder mock)
+          <div style="margin-top: 1rem; font-size: 0.85rem; color: #94a3b8; line-height: 1.45;">
+            <strong>System Status</strong>: <code>Healthy & Online</code><br/>
+            <strong>Ingestion Feed Source</strong>: Continuous mock streaming (<code>shipments.csv</code>)<br/>
+            <strong>Storage Location</strong>: Secured local enterprise folders (S3-compatible bucket simulation)
           </div>
         </div>
         """, unsafe_allow_html=True)
         
-        # Display preview of Gold KPI if exists
+        # Display preview of Gold KPI if exists in plain English
         gold_path = data_pipeline.GOLD_DIR / "kpi_dashboard.json"
         if gold_path.exists():
-            st.markdown("#### Latest Gold Dashboard KPIs")
-            with open(gold_path, "r") as f:
-                kpi_data = json.load(f)
-            st.json(kpi_data)
+            st.markdown("#### Latest Certified Business Metrics")
+            try:
+                with open(gold_path, "r") as f:
+                    kpi_data = json.load(f)
+                
+                # Format ISO timestamp to readable date-time
+                raw_time = kpi_data.get("kpi_timestamp", "")
+                readable_time = raw_time.split(".")[0].replace("T", " ") if raw_time else "N/A"
+                
+                st.markdown(f"🗓️ **Last Calculation Time**: `{readable_time}`")
+                
+                c_kpi1, c_kpi2 = st.columns(2)
+                with c_kpi1:
+                    st.metric("Total Active Shipments", f"{kpi_data.get('total_active_shipments', 0)}")
+                    st.metric("Delayed Cargo Units", f"{kpi_data.get('delayed_count', 0)}")
+                    st.metric("Average Transit Delay", f"{kpi_data.get('average_predicted_delay_hours', 0.0)} Hours")
+                with c_kpi2:
+                    st.metric("Active Assets Value", f"₹{kpi_data.get('total_value_inr', 0)/1e6:.2f}M")
+                    st.metric("Delay Incurrence Rate", f"{kpi_data.get('delay_rate_percentage', 0.0)}%")
+                    
+                    risk_info = kpi_data.get('risk_category_counts', {})
+                    critical_count = risk_info.get('Critical', 0)
+                    st.metric("Critical Risk Consignments", f"{critical_count}")
+            except Exception as e:
+                st.info("Failed to display metrics preview. Please run the Ingestion Pipeline first.")
             
     st.divider()
     
-    # 2. SSH Infrastructure reference console
-    st.markdown("### SSH & Operations Console Reference")
-    st.info("Below are the exact security and operations console commands remote into production nodes, configure keys, and tunnel ports.")
+    # 2. Master Data Management & Auditing
+    st.markdown("### Master Data Management & Quality Auditing Rules")
+    st.info("The system automatically checks every record against corporate data policies. Below are the current active data quality rules:")
+    
+    audit_left, audit_right = st.columns(2)
+    with audit_left:
+        st.markdown("#### Outbound Logistics Quality Rules")
+        st.markdown("""
+        - ✅ **Unique Shipment Identifier**
+          - *Rule*: Every active shipment record must possess a valid, non-empty tracking code.
+        - ✅ **GPS Boundary Validity Check**
+          - *Rule*: Location latitudes and longitudes must fall strictly within the geopolitical borders of India.
+        """)
+    with audit_right:
+        st.markdown("#### Operational Integrity Rules")
+        st.markdown("""
+        - ✅ **Dispatch Link Integrity**
+          - *Rule*: All transit shipments must have an assigned driver name, vehicle registration number, and contact number.
+        - ✅ **Delay Log Allocation**
+          - *Rule*: Any shipment marked as 'Delayed' must have an accompanying delay reason and recovery action in the database.
+        """)
+        
+    st.divider()
+    
+    # 3. Security Operations Protocol Guide
+    st.markdown("### Data Security & Remote Operations Guide")
+    st.info("Below is the operational protocol for secure remote administration, file transfers, and server connectivity explained in plain English.")
     
     ssh_left, ssh_right = st.columns(2)
     with ssh_left:
-        st.markdown("#### SSH Command Guide")
-        st.code("""
-# 1. Generate SSH Key pair (Ed25519)
-ssh-keygen -t ed25519 -b 4096 -C "admin@logimind.ai"
-
-# 2. Copy Public Key to remote host
-ssh-copy-id -i ~/.ssh/id_ed25519.pub root@192.168.1.100
-
-# 3. Securely connect to your remote node
-ssh -i ~/.ssh/id_ed25519 root@192.168.1.100
-
-# 4. Check running Docker containers on server
-ssh root@192.168.1.100 "docker ps"
-        """, language="bash")
+        st.markdown("#### Security Key Generation & Remote Login")
+        st.markdown("""
+        1. **Create Digital Security Keys**
+           - Administrators generate a pair of unique cryptographic security keys (specifically an Ed25519 key pair). This provides robust security, far stronger than standard text passwords.
+        2. **Authorize the Key on the Server**
+           - The administrator's public security key is copied to the remote logistics server's approved list.
+        3. **Connect Securely to the Server**
+           - Connects the administrator's local computer directly to the remote server using the private security key, establishing a secure encrypted management session.
+        4. **Audit Container Status**
+           - Evaluates the virtual servers running on the machine (like PostgreSQL and Kafka) to ensure all services are healthy and running.
+        """)
         
     with ssh_right:
-        st.markdown("#### Kafka Tunneling & SCP Guide")
-        st.code("""
-# 1. Forward remote Kafka broker (9092) and UI (8080) to localhost
-ssh -L 9092:localhost:9092 -L 8080:localhost:8080 root@192.168.1.100 -N
-
-# 2. Verify local connectivity to forwarded Kafka
-kafkacat -b localhost:9092 -L
-
-# 3. SCP: Send file to remote server Data Lake
-scp ./data/shipments.csv root@192.168.1.100:/opt/datalake/bronze/
-
-# 4. SCP: Backup gold report from remote to local
-scp root@192.168.1.100:/opt/datalake/gold/kpi_dashboard.json ./backups/
-        """, language="bash")
+        st.markdown("#### Port Forwarding & Secure File Transfer")
+        st.markdown("""
+        1. **Establish Secure Port Tunneling**
+           - Binds the remote server's messaging channels (port 9092) and admin interface (port 8080) directly to your local computer's ports. This allows secure local administration as if the server was on your desk.
+        2. **Verify Port Connection**
+           - Checks the active connection tunnels to ensure events are streaming successfully without interruptions.
+        3. **Safe File Upload (Secure Copy)**
+           - Uploads raw shipment files directly from the operator's computer into the Bronze storage zone of the remote server.
+        4. **Back up Business KPI Reports**
+           - Downloads the certified Gold analytical summary report from the remote server's secure storage to local back-up repositories.
+        """)

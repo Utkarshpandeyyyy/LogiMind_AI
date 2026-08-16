@@ -109,6 +109,10 @@ def run_silver_layer():
         destination = r.get("destination", "Unknown").strip()
         priority = r.get("priority", "Standard").strip().capitalize()
         status = r.get("status", "On-Time").strip()
+        weather = r.get("weather", "Clear").strip()
+        traffic = r.get("traffic", "Low").strip()
+        vehicle_health = r.get("vehicle_health", "Good").strip()
+        warehouse_load = r.get("warehouse_load", "Normal").strip()
         
         # Ensure numerical types and defaults
         try:
@@ -130,17 +134,51 @@ def run_silver_layer():
             value = float(r.get("shipment_value_inr", 0))
         except:
             value = 0.0
+
+        try:
+            base_eta_hours = float(r.get("base_eta_hours", 0.0))
+        except:
+            base_eta_hours = 0.0
+            
+        try:
+            origin_lat = float(r.get("origin_lat", 0.0))
+        except:
+            origin_lat = 0.0
+            
+        try:
+            origin_lon = float(r.get("origin_lon", 0.0))
+        except:
+            origin_lon = 0.0
+            
+        try:
+            destination_lat = float(r.get("destination_lat", 0.0))
+        except:
+            destination_lat = 0.0
+            
+        try:
+            destination_lon = float(r.get("destination_lon", 0.0))
+        except:
+            destination_lon = 0.0
             
         cleaned_records.append({
             "shipment_id": shipment_id,
             "origin": origin,
             "destination": destination,
-            "priority": priority,
-            "status": status,
             "distance_km": distance_km,
-            "risk_score": risk_score,
-            "predicted_delay_hours": delay_hours,
+            "weather": weather,
+            "traffic": traffic,
+            "priority": priority,
+            "vehicle_health": vehicle_health,
+            "warehouse_load": warehouse_load,
             "shipment_value_inr": value,
+            "base_eta_hours": base_eta_hours,
+            "predicted_delay_hours": delay_hours,
+            "risk_score": risk_score,
+            "status": status,
+            "origin_lat": origin_lat,
+            "origin_lon": origin_lon,
+            "destination_lat": destination_lat,
+            "destination_lon": destination_lon,
             "processed_at": datetime.now().isoformat()
         })
         
@@ -150,8 +188,74 @@ def run_silver_layer():
     
     silver_df = pd.DataFrame(cleaned_records)
     silver_df.to_csv(silver_file, index=False)
-    
     print(f"Silver Layer: Saved cleaned data to {silver_file.name}")
+    
+    # Write to main source CSV so that fallback/cloud mode sees the updated data too!
+    try:
+        export_df = silver_df.drop(columns=["processed_at"], errors="ignore")
+        export_df.to_csv(SOURCE_CSV, index=False)
+        print(f"Silver Layer: Synchronized cleaned data to main source CSV: {SOURCE_CSV.name}")
+    except Exception as e:
+        print(f"Silver Layer: Failed to synchronize main source CSV: {e}")
+        
+    # Try to upsert into PostgreSQL database
+    try:
+        import psycopg2
+        from psycopg2.extras import execute_values
+        
+        conn = psycopg2.connect(
+            host="localhost",
+            port=5432,
+            user="postgres",
+            password="password",
+            dbname="logimind"
+        )
+        cur = conn.cursor()
+        
+        db_records = []
+        for r in cleaned_records:
+            db_records.append((
+                r["shipment_id"], r["origin"], r["destination"], r["distance_km"],
+                r["weather"], r["traffic"], r["priority"], r["vehicle_health"],
+                r["warehouse_load"], r["shipment_value_inr"], r["base_eta_hours"],
+                r["predicted_delay_hours"], r["risk_score"], r["status"],
+                r["origin_lat"], r["origin_lon"], r["destination_lat"], r["destination_lon"]
+            ))
+            
+        upsert_query = """
+        INSERT INTO shipments (
+            shipment_id, origin, destination, distance_km, weather, traffic, priority,
+            vehicle_health, warehouse_load, shipment_value_inr, base_eta_hours,
+            predicted_delay_hours, risk_score, status, origin_lat, origin_lon,
+            destination_lat, destination_lon
+        ) VALUES %s
+        ON CONFLICT (shipment_id) DO UPDATE SET
+            origin = EXCLUDED.origin,
+            destination = EXCLUDED.destination,
+            distance_km = EXCLUDED.distance_km,
+            weather = EXCLUDED.weather,
+            traffic = EXCLUDED.traffic,
+            priority = EXCLUDED.priority,
+            vehicle_health = EXCLUDED.vehicle_health,
+            warehouse_load = EXCLUDED.warehouse_load,
+            shipment_value_inr = EXCLUDED.shipment_value_inr,
+            base_eta_hours = EXCLUDED.base_eta_hours,
+            predicted_delay_hours = EXCLUDED.predicted_delay_hours,
+            risk_score = EXCLUDED.risk_score,
+            status = EXCLUDED.status,
+            origin_lat = EXCLUDED.origin_lat,
+            origin_lon = EXCLUDED.origin_lon,
+            destination_lat = EXCLUDED.destination_lat,
+            destination_lon = EXCLUDED.destination_lon;
+        """
+        execute_values(cur, upsert_query, db_records)
+        conn.commit()
+        cur.close()
+        conn.close()
+        print("Silver Layer: Successfully upserted cleaned shipments to PostgreSQL database.")
+    except Exception as e:
+        print(f"Silver Layer: Database synchronization skipped or failed: {e}")
+        
     return cleaned_records
 
 def run_gold_layer():

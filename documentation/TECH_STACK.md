@@ -40,6 +40,24 @@
     - Enables modeling of entities (Suppliers, Hubs, Customers) as nodes and their shipping lanes as edges.
     - Facilitates calculating network connectivity and analyzing the downstream impact when nodes (such as the Chennai Hub) fail.
 
+### 6. **Relational Database & Backend Storage**
+- **[PostgreSQL](https://www.postgresql.org/)**:
+  - **Purpose**: Persisting structured supply chain transactions and real-time logs.
+  - **Why it's used**:
+    - Stores structured relational tables for `shipments`, `warehouses`, `orders`, and `vehicles`.
+    - Enables complex relation tracking (e.g., mapping user orders to transit vehicles and their GPS routes).
+- **[psycopg2-binary](https://pypi.org/project/psycopg2-binary/)**:
+  - **Purpose**: Python adapter for PostgreSQL.
+  - **Why it's used**:
+    - Facilitates connection pools and query execution directly from python modules ([db_setup.py](file:///c:/Users/utkar/OneDrive/Desktop/LogiMind_AI/db_setup.py) and [order_agent.py](file:///c:/Users/utkar/OneDrive/Desktop/LogiMind_AI/order_agent.py)).
+
+### 7. **AI Agent Orchestration & NLP**
+- **[LangGraph](https://github.com/langchain-ai/langgraph) & [LangChain Core](https://github.com/langchain-ai/langchain)**:
+  - **Purpose**: Implementing stateful conversation graphs for the AI Copilot.
+  - **Why it's used**:
+    - Defines a cyclical state machine (`AgentState`) to classify user natural language intent (e.g., querying order ETA vs. delay reason).
+    - Translates user intent into dynamic SQL queries, queries the database, and processes outputs back into human-friendly explanations.
+
 ---
 
 ## Architecture Flow
