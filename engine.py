@@ -131,7 +131,7 @@ def validate_query(query: str) -> tuple[bool, str]:
         
     return True, ""
 
-def answer_copilot(question: str, shipments: pd.DataFrame, warehouses: pd.DataFrame) -> str:
+def answer_copilot(question: str, shipments: pd.DataFrame, warehouses: pd.DataFrame, user_role: str = "Guest (Viewer)") -> str:
     # First validate query to block technical questions
     is_valid, validation_msg = validate_query(question)
     if not is_valid:
@@ -139,13 +139,54 @@ def answer_copilot(question: str, shipments: pd.DataFrame, warehouses: pd.DataFr
         
     q = question.lower().strip()
     
+    # 0. Check for user profile or role queries
+    profile_keywords = ["my role", "my profile", "who am i", "my permissions", "my password", "what can i do", "what is my access", "about my profile", "clearance"]
+    if any(x in q for x in profile_keywords):
+        if user_role == "Executive (Admin)":
+            return (
+                f"### 🔒 User Profile: **Executive (Admin)**\n\n"
+                f"- **Your Role**: Corporate Executive / System Administrator\n"
+                f"- **Clearance Level**: Maximum (Full read-write access to all dashboards and operations)\n"
+                f"- **Authorized Workspace Views**:\n"
+                f"  1. `Executive Control Tower` (Financial exposures, live Plotly maps, value at risk)\n"
+                f"  2. `Digital Twin Simulator` (What-if simulation engine and recommended actions)\n"
+                f"  3. `Network Intelligence` (Network dependency graph and hub failure routing)\n"
+                f"  4. `AI Copilot` (Conversational SQL tracking agent)\n"
+                f"  5. `Data Governance & MDM` (Ingestion pipeline controls, data quality audits)\n"
+                f"- **Authentication Secret**: `admin123` (Your secure password)\n\n"
+                f"💡 *Executive Tip*: You have administrative power to run the medallion data pipeline on the operations page to sync fresh shipments into PostgreSQL."
+            )
+        elif user_role == "Logistics Operator":
+            return (
+                f"### 🚚 User Profile: **Logistics Operator**\n\n"
+                f"- **Your Role**: Logistics Dispatch Operator\n"
+                f"- **Clearance Level**: Medium (Authorized to simulate routes and track dispatches)\n"
+                f"- **Authorized Workspace Views**:\n"
+                f"  1. `Digital Twin Simulator` (Test environmental delays and alternative corridors)\n"
+                f"  2. `Network Intelligence` (Trace supplier and customer dependencies)\n"
+                f"  3. `AI Copilot` (Query live vehicle locations and driver contacts)\n"
+                f"- **Authentication Secret**: `ops123` (Your secure password)\n\n"
+                f"⚠️ *Access Alert*: You do not have permissions to access the Executive Control Tower (financial exposure dashboard) or the Data Governance control panel."
+            )
+        else: # Guest (Viewer)
+            return (
+                f"### 👁️ User Profile: **Guest (Viewer)**\n\n"
+                f"- **Your Role**: Guest Auditor / Viewer\n"
+                f"- **Clearance Level**: Minimum (View-only permissions for general reports)\n"
+                f"- **Authorized Workspace Views**:\n"
+                f"  1. `Executive Control Tower` (General metrics and live map)\n"
+                f"  2. `Network Intelligence` (View supplier-customer graph topology)\n"
+                f"- **Authentication Secret**: `guest123` (Your secure password)\n\n"
+                f"⚠️ *Access Alert*: You are restricted from running digital twin simulations, asking the Copilot about vehicle/driver tracking databases, or modifying data ingestion pipelines."
+            )
+
     # 1. Route order details, tracking, vehicle, driver, and delivery-related queries to PostgreSQL via LangGraph
     order_keywords = ["order", "track", "delivery", "vehicle", "driver", "where is", "how long", "delayed", "delay"]
     order_id_match = re.search(r'\b(ord-\d+|shp-\d+)\b', q)
     if order_id_match or any(x in q for x in order_keywords):
         from order_agent import process_order_query
         try:
-            return process_order_query(question)
+            return process_order_query(question, user_role=user_role)
         except Exception as e:
             order_code = order_id_match.group(0).upper() if order_id_match else "your order"
             return (
@@ -181,52 +222,85 @@ def answer_copilot(question: str, shipments: pd.DataFrame, warehouses: pd.DataFr
         }
         fallback_hub = redirect_hubs.get(matched_city, "the nearest healthy hub")
         
+        role_action = ""
+        if user_role == "Executive (Admin)":
+            role_action = "\n\n💡 **Executive Action**: You can run the data ingestion pipeline in the Data operations tab to clean and update these re-routed lanes in PostgreSQL."
+        elif user_role == "Logistics Operator":
+            role_action = "\n\n💡 **Operator Action**: Go to the What-if Simulator page to model this closure with alternate traffic and weather configurations."
+        else:
+            role_action = "\n\n💡 **Auditor Note**: Go to the Network Intelligence tab to view the visual graph topology of these connections."
+
         return (
             f"Simulating node closure for **{matched_city} Hub**:\n\n"
             f"- **Affected Shipments**: {len(impacted)} active route segments.\n"
             f"- **Financial Exposure**: ₹{exposure:,.0f} in transit value.\n"
-            f"- **Mitigation Recommendation**: Redirect critical orders to {fallback_hub}, move standard orders to alternate hubs, and notify customers with SLA risk above 50%."
+            f"- **Mitigation Recommendation**: Redirect critical orders to {fallback_hub}, move standard orders to alternate hubs, and notify customers with SLA risk above 50%.{role_action}"
         )
         
     # 3. Check for Cost Optimization queries
     if "save" in q or "cost" in q or "optimis" in q or "optimiz" in q:
         high_risk = shipments[shipments.risk_score >= 60]
         potential = int(high_risk.shipment_value_inr.sum() * 0.035)
+        
+        role_action = ""
+        if user_role == "Executive (Admin)":
+            role_action = "\n\n💡 **Executive Action**: Audit the Value at Risk on the Control Tower to see which high-value contracts can be optimized today."
+        elif user_role == "Logistics Operator":
+            role_action = "\n\n💡 **Operator Action**: Coordinate with warehouse pickers and drivers to prevent hub congestion and avoid overtime costs."
+        else:
+            role_action = "\n\n💡 **Auditor Note**: Cost comparisons are visible in the Digital Twin case summaries."
+
         return (
             f"To optimize and boost logistics cost savings:\n\n"
             f"1. **Expedite High-Risk Shipments**: Prioritizing the **{len(high_risk)}** highest-risk shipments (Risk Score >= 60) can protect approximately **₹{potential:,.0f}** by avoiding SLA delay penalties.\n"
             f"2. **Dynamic Route Rerouting**: Rerouting vehicles around high-traffic or storm areas reduces fuel costs and delay penalties.\n"
-            f"3. **Load Balancing**: Prevent warehouse overloading by shifting picking and fulfillment to less busy hubs, avoiding warehouse overtime costs."
+            f"3. **Load Balancing**: Prevent warehouse overloading by shifting picking and fulfillment to less busy hubs, avoiding warehouse overtime costs.{role_action}"
         )
         
     # 4. Check if it matches other structured queries from the dashboard
     if "highest risk" in q or "most risky" in q:
         row = shipments.sort_values("risk_score", ascending=False).iloc[0]
+        role_action = ""
+        if user_role == "Executive (Admin)":
+            role_action = f" As an **Executive**, you can authorize emergency dispatch resources to safeguard this shipment value (₹{row.shipment_value_inr:,.0f})."
+        elif user_role == "Logistics Operator":
+            role_action = " As an **Operator**, you should immediately notify driver " + row.shipment_id + " to switch to weather-safe routing."
         return (
             f"Active Shipment **{row.shipment_id}** currently presents the highest risk in the network at **{row.risk_score}/100**.\n\n"
             f"- **Route**: {row.origin} ➔ {row.destination}\n"
             f"- **Conditions**: Weather is {row.weather.lower()}, Traffic load is {row.traffic.lower()}.\n"
-            f"- **Recommended Mitigation Action**: Reroute through alternative corridor and reserve a backup vehicle."
+            f"- **Recommended Mitigation Action**: Reroute through alternative corridor and reserve a backup vehicle.{role_action}"
         )
         
     if "delayed" in q:
         delayed = shipments[shipments.status.eq("Delayed")]
+        role_action = ""
+        if user_role == "Executive (Admin)":
+            role_action = "\n\n💡 **Executive Action**: Review late delivery penalties in your monthly SLA ledger."
+        elif user_role == "Logistics Operator":
+            role_action = "\n\n💡 **Operator Action**: Track individual delay reasons (like traffic or rain) by querying order details in the copilot."
         return (
             f"There are **{len(delayed)}** delayed shipments currently in transit.\n\n"
             f"- **Average Delay**: {delayed.predicted_delay_hours.mean():.1f} hours.\n"
-            f"- **Top Controllable Causes**: Traffic congestion and warehouse load spikes."
+            f"- **Top Controllable Causes**: Traffic congestion and warehouse load spikes.{role_action}"
         )
         
     if "warehouse" in q and "risk" in q:
         risky = warehouses.sort_values("capacity_pct", ascending=False).iloc[0]
+        role_action = ""
+        if user_role == "Executive (Admin)":
+            role_action = "\n\n💡 **Executive Action**: Authorize expansion budget or divert new supplier contracts away from " + risky.warehouse + "."
+        elif user_role == "Logistics Operator":
+            role_action = "\n\n💡 **Operator Action**: Divert new logistics volume to the nearest healthy hub until capacity drops below 80%."
         return (
             f"The warehouse hub presenting the highest stress is **{risky.warehouse}** running at **{risky.capacity_pct}%** capacity.\n\n"
-            f"- **Mitigation Action**: Divert new logistics volume to the nearest healthy hub until utilization drops below 80%."
+            f"- **Mitigation Action**: Divert new logistics volume to the nearest healthy hub until utilization drops below 80%.{role_action}"
         )
         
     # 5. Friendly operational fallback
     return (
         "I am the Virtual Pilot AI. I can answer questions regarding:\n"
+        "- Your profile details, password, and permissions (e.g. 'what is my role')\n"
         "- Order details, current locations, and remaining ETA (e.g. 'where is order ORD-1001')\n"
         "- Driver contact details and vehicle numbers (e.g. 'who is the driver for order ORD-1002')\n"
         "- Delay reasons and operational mitigation steps (e.g. 'why is order ORD-1001 delayed')\n"

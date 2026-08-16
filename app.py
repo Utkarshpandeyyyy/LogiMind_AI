@@ -80,6 +80,8 @@ if "user_role" not in st.session_state:
     st.session_state["user_role"] = None
 if "tour_step" not in st.session_state:
     st.session_state["tour_step"] = "Welcome (Manual Navigation)"
+if "login_count" not in st.session_state:
+    st.session_state["login_count"] = 0
 
 # Credentials
 USER_ROLES = {
@@ -108,11 +110,29 @@ if not st.session_state["logged_in"]:
             if password == expected_pass:
                 st.session_state["logged_in"] = True
                 st.session_state["user_role"] = role
+                st.session_state["login_count"] += 1
+                
+                # First login defaults to starting the tour, subsequent logins default to manual navigation (hiding the tour guide)
+                if st.session_state["login_count"] == 1:
+                    st.session_state["tour_step"] = "Stop 1: Executive Control Tower"
+                else:
+                    st.session_state["tour_step"] = "Welcome (Manual Navigation)"
+                    
                 st.success(f"Successfully authenticated as {role}!")
                 st.rerun()
             else:
                 st.error("Incorrect password for the selected role. Please try again.")
-                
+        # Future RBAC authentication options (Roadmap Placeholder)
+    st.write("")
+    st.markdown("### 🗺️ Future Authentication Roadmap (Planned Features)")
+    c_sso, c_bio, c_req = st.columns(3)
+    if c_sso.button("🔒 Sign In with SSO / SAML", use_container_width=True):
+        st.toast("🚧 SSO Integration is planned for Enterprise release v2.0.")
+    if c_bio.button("🤖 Sign In with Biometrics / FaceID", use_container_width=True):
+        st.toast("🚧 Biometrics/FaceID login will be supported on mobile apps in Q4.")
+    if c_req.button("✉️ Request Access / Sign Up", use_container_width=True):
+        st.toast("🚧 Self-registration requests will be routed to IT administrators in Q3.")
+        
     st.stop()
 
 # If logged in, filter navigation based on role permissions
@@ -122,7 +142,7 @@ role = st.session_state["user_role"]
 if role == "Executive (Admin)":
     allowed_pages = ["Executive Control Tower", "Digital Twin Simulator", "Network Intelligence", "AI Copilot", "Data Governance & MDM"]
 elif role == "Logistics Operator":
-    allowed_pages = ["Digital Twin Simulator", "Network Intelligence", "AI Copilot"]
+    allowed_pages = ["Executive Control Tower", "Digital Twin Simulator", "Network Intelligence", "AI Copilot"]
 else:  # Guest (Viewer)
     allowed_pages = ["Executive Control Tower", "Network Intelligence"]
 
@@ -142,14 +162,17 @@ st.sidebar.divider()
 
 # Guided Platform Tour Selector
 st.sidebar.subheader("🧭 Guided Platform Tour")
-tour_stops = [
-    "Welcome (Manual Navigation)",
-    "Stop 1: Executive Control Tower",
-    "Stop 2: What-if Digital Twin",
-    "Stop 3: Network Graph Resiliency",
-    "Stop 4: Conversational AI Copilot",
-    "Stop 5: Data Operations & Cleaning"
-]
+tour_stops = ["Welcome (Manual Navigation)"]
+if "Executive Control Tower" in allowed_pages:
+    tour_stops.append("Stop 1: Executive Control Tower")
+if "Digital Twin Simulator" in allowed_pages:
+    tour_stops.append("Stop 2: What-if Digital Twin")
+if "Network Intelligence" in allowed_pages:
+    tour_stops.append("Stop 3: Network Graph Resiliency")
+if "AI Copilot" in allowed_pages:
+    tour_stops.append("Stop 4: Conversational AI Copilot")
+if "Data Governance & MDM" in allowed_pages:
+    tour_stops.append("Stop 5: Data Operations & Cleaning")
 
 # Set active page in session state if not existing
 if "active_page" not in st.session_state:
@@ -199,6 +222,23 @@ elif page == "AI Copilot":
     st.session_state["tour_step"] = "Stop 4: Conversational AI Copilot"
 elif page == "Data Governance & MDM":
     st.session_state["tour_step"] = "Stop 5: Data Operations & Cleaning"
+# Future Roadmap: Real-Time GPS Tracker Status
+st.sidebar.divider()
+st.sidebar.subheader("📡 Live GPS Stream (Roadmap)")
+mock_trackers = [
+    "Select Active Truck...", 
+    "Truck DL-10-A (Delhi Corridors)", 
+    "Truck MH-02-B (Mumbai Port)", 
+    "Truck KA-51-C (Bengaluru Depot)",
+    "Truck TN-09-D (Chennai Hub)"
+]
+selected_mock_tracker = st.sidebar.selectbox(
+    "Live Vehicle Feed (Future Work)", 
+    mock_trackers,
+    help="Planned integration for real-time telemetry streaming."
+)
+if selected_mock_tracker != "Select Active Truck...":
+    st.sidebar.info(f"🚧 **Future Work**: Live telemetry stream for **{selected_mock_tracker.split(' ')[1]}** is under development. Real-time path tracing is planned for release v2.1.")
 
 st.sidebar.divider()
 st.sidebar.title("LogiMind AI")
@@ -302,7 +342,10 @@ if page == "Executive Control Tower":
     c1.metric("Active Shipments", total)
     c2.metric("Delayed", delayed)
     c3.metric("Critical Risk", critical)
-    c4.metric("Value at Risk", f"₹{exposure/1e6:.1f}M")
+    if role == "Executive (Admin)":
+        c4.metric("Value at Risk", f"₹{exposure/1e6:.1f}M")
+    else:
+        c4.metric("Value at Risk", "🔒 Restricted")
     c5.metric("Network SLA", f"{sla}%")
 
     left, right = st.columns([1.15, 1])
@@ -376,6 +419,8 @@ if page == "Executive Control Tower":
             else "Monitor"
         ), axis=1
     )
+    if role != "Executive (Admin)":
+        action_df["shipment_value_inr"] = "🔒 [Restricted]"
     st.dataframe(
         action_df[[
             "shipment_id", "origin", "destination", "priority", "risk_score",
@@ -410,7 +455,10 @@ elif page == "Digital Twin Simulator":
     a.metric("Predicted Delay", f"{scenario.delay_hours} h", f"{scenario.delay_hours-baseline.delay_hours:+.1f} h")
     b.metric("Risk Score", f"{scenario.risk_score}/100")
     c.metric("SLA Probability", f"{scenario.sla_probability_pct}%")
-    d.metric("Estimated Cost", f"₹{scenario.estimated_cost_inr:,.0f}")
+    if role == "Executive (Admin)":
+        d.metric("Estimated Cost", f"₹{scenario.estimated_cost_inr:,.0f}")
+    else:
+        d.metric("Estimated Cost", "🔒 Restricted")
     e.metric("Carbon", f"{scenario.carbon_kg:,.0f} kg")
 
     st.success(f"Recommended action: {scenario.recommended_action}")
@@ -427,6 +475,9 @@ elif page == "Digital Twin Simulator":
             scenario.carbon_kg / 10, scenario.sla_probability_pct
         ],
     })
+    if role != "Executive (Admin)":
+        comparison = comparison[comparison["Metric"] != "Cost (₹000)"]
+        
     fig = px.bar(
         comparison.melt("Metric", var_name="Case", value_name="Value"),
         x="Metric", y="Value", color="Case", barmode="group",
@@ -542,7 +593,7 @@ elif page == "AI Copilot":
 
     if st.button("Analyse", type="primary", use_container_width=True):
         if question.strip():
-            answer = answer_copilot(question, shipments, warehouses)
+            answer = answer_copilot(question, shipments, warehouses, user_role=role)
             st.markdown("### AI Response")
             st.write(answer)
 
